@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premier League Team Stats</title>
+  <style>
+    /* Global Styles */
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1, h2 {
+      margin: 15px 0;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: #0056b3;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      color: #333;
+      border-bottom: 3px solid #0056b3;
+      display: inline-block;
+      padding-bottom: 4px;
+    }
+
+    /* Table Container */
+    .table-container {
+      width: 90%;
+      margin: 20px auto;
+      overflow-x: auto;
+      max-height: 1000px;
+    }
+
+    /* Table Styling */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      background: #ffffff;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    th, td {
+      padding: 8px;
+      font-size: 14px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+
+    /* Sticky Table Headers */
+    thead tr {
+      background-color: #0056b3;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    th {
+      background-color: #0056b3;
+      color: white;
+      font-weight: bold;
+      cursor: help; /* Indicates tooltip */
+    }
+
+    /* Conditional Formatting */
+    .score {
+      font-weight: bold;
+      border-radius: 4px;
+      padding: 4px;
+      transition: background 0.3s ease;
+    }
+
+    /* Gradient Coloring */
+    .score-1 { background-color: #ff4d4d; color: #fff; }
+    .score-2 { background-color: #ff944d; color: #fff; }
+    .score-3 { background-color: #ffd24d; color: #000; }
+    .score-4 { background-color: #a0e057; color: #000; }
+    .score-5 { background-color: #47d147; color: #fff; }
+
+    /* Header Hover Styling */
+    th {
+    position: relative;
+    cursor: pointer;
+  }
+
+  th:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: -30px;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.2s ease-in-out;
+  }
+  </style>
+</head>
+<body>
+  <h1>Premier League Team Stats</h1>
+
+  <div class="table-container">
+    <h2>Home Performance</h2>
+    <table id="home-stats-table">
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th data-tooltip="Frequency which the team scores 2 or more goals, 5 being the top rating at >80% occurrence.">Scored 2+</th>
+          <th data-tooltip="Frequency which the team fails to score, 1 being the worst rating if they are kept out in >80% of fixtures.">Scored None</th>
+          <th data-tooltip="Frequency which the team keeps a clean sheet, 5 being the top rating keeping a CS in >80% of fixtures.">Conceded None</th>
+          <th data-tooltip="Frequency which the team concedes 2 or more goals, 5 being the top rating conceding less than 2 goals in >80% fixtures.">Conceded >2</th>
+          <th data-tooltip="Blended rating of attacking scores, weighted towards frequency of scoring 2 or more goals.">Attacking Score</th>
+          <th data-tooltip="Blended rating of defensive scores, weighted towards frequency of keeping clean sheets.">Defensive Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Home stats data will be populated here -->
+      </tbody>
+    </table>
+
+    <h2>Away Performance</h2>
+    <table id="away-stats-table">
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th data-tooltip="Frequency which the team scores 2 or more goals, 5 being the top rating at >80% occurrence.">Scored 2+</th>
+          <th data-tooltip="Frequency which the team fails to score, 1 being the worst rating if they are kept out in >80% of fixtures.">Scored None</th>
+          <th data-tooltip="Frequency which the team keeps a clean sheet, 5 being the top rating keeping a CS in >80% of fixtures.">Conceded None</th>
+          <th data-tooltip="Frequency which the team concedes 2 or more goals, 5 being the top rating conceding less than 2 goals in >80% fixtures.">Conceded >2</th>
+          <th data-tooltip="Blended rating of attacking scores, weighted towards frequency of scoring 2 or more goals.">Attacking Score</th>
+          <th data-tooltip="Blended rating of defensive scores, weighted towards frequency of keeping clean sheets.">Defensive Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Away stats data will be populated here -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // URL of the JSON file in your S3 bucket
+    const jsonUrl = 'https://team-stats-bucket.s3.eu-north-1.amazonaws.com/team_stats.json';
+
+    // Function to determine class based on value
+    function getScoreClass(value) {
+      return `score-${value}`;
+    }
+
+    // Function to populate a table with conditional formatting
+    function populateTable(tableId, data) {
+      const tableBody = document.getElementById(tableId).querySelector('tbody');
+      tableBody.innerHTML = ''; // Clear existing data if any
+      data.forEach(team => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${team.team}</td>
+          <td class="score ${getScoreClass(team.scored_2_plus_rank)}">${team.scored_2_plus_rank}</td>
+          <td class="score ${getScoreClass(team.scored_none_rank)}">${team.scored_none_rank}</td>
+          <td class="score ${getScoreClass(team.conceded_none_rank)}">${team.conceded_none_rank}</td>
+          <td class="score ${getScoreClass(team.conceded_2_or_more_rank)}">${team.conceded_2_or_more_rank}</td>
+          <td class="score ${getScoreClass(Math.round(team.attacking_score))}">${team.attacking_score}</td>
+          <td class="score ${getScoreClass(Math.round(team.defensive_score))}">${team.defensive_score}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Fetch and display data
+    fetch(jsonUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log("Fetched Data:", data);
+        populateTable('home-stats-table', data.home_stats_table);
+        populateTable('away-stats-table', data.away_stats_table);
+      })
+      .catch(error => console.error('Error fetching data:', error));
+  </script>
+</body>
+</html>
